@@ -1,6 +1,6 @@
 /*
-   based on the execlent answer by deamentiaemundi
-   http://stackoverflow.com/a/40116696?noredirect=1
+	based on the execlent answer by deamentiaemundi
+	http://stackoverflow.com/a/40116696?noredirect=1
 */
 
 #include <X11/Xlib.h>
@@ -8,43 +8,65 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef int bool;
+#define false 0
+#define true 1
+bool verbose	= false;
+bool quiet	= false;
+bool list	= false;
+
 static int compare(const void *a, const void *b)
 {
-  return strcmp(*(char **) a, *(char **) b);
+	return strcmp(*(char **) a, *(char **) b);
 }
 
-static void print_extension_info(Display * dpy)
+int extension_info(Display * dpy, char* feature)
 {
-  int n = 0, i;
-  char **extlist = XListExtensions(dpy, &n);
+	int n = 0, i;
+	char **extlist = XListExtensions(dpy, &n);
+	int result=EXIT_FAILURE;
 
-
-  printf("number of extensions:    %d\n", n);
-  if (extlist) {
-    qsort(extlist, n, sizeof(char *), compare);
-    for (i = 0; i < n; i++) {
-
-      printf("    %s\n", extlist[i]);
-
-    }
-  }
-  // TODO: it might not be a good idea to free extlist, check
+	if (verbose) printf("number of extensions: %d\n", n);
+	if (extlist) {
+		if (list) qsort(extlist, n, sizeof(char *), compare);
+		for (i = 0; i < n; i++) {
+			if (list) printf("%s\n", extlist[i]);
+			if (0==strcmp(feature, extlist[i])) {
+				if (verbose) printf("Extension '%s' found.\n", feature);
+				if (list) {
+					result=EXIT_SUCCESS;
+				} else {
+					return EXIT_SUCCESS;
+				}
+			}
+		}
+		if (verbose && (EXIT_FAILURE==result)) printf("Extension '%s' not found.\n", feature);
+	} else {
+		if (verbose) printf("No extensions found.\n");
+	}
+	// TODO: it might not be a good idea to free extlist, check
+	return result;
 }
 
-int main()
+int main(int argc, char **argv)
 {
-  Display *dpy;
-  char *displayname = NULL;
-
-  dpy = XOpenDisplay(displayname);
-  if (!dpy) {
-    fprintf(stderr, "Unable to open display \"%s\".\n",
-            XDisplayName(displayname));
-    exit(EXIT_FAILURE);
-  }
-
-  print_extension_info(dpy);
-
-  XCloseDisplay(dpy);
-  exit(EXIT_SUCCESS);
+	Display *dpy;
+	char *displayname = NULL;
+	int result;
+	
+	printf("debug %d\n", argc);
+	if(2>argc){
+		fprintf(stderr, "%s: Insuficent arguments\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	dpy = XOpenDisplay(displayname);
+	if (!dpy) {
+		if (!quiet) fprintf(stderr, "%s: Unable to open display \"%s\".\n", argv[0], XDisplayName(displayname));
+		exit(EXIT_FAILURE);
+	}
+	
+	result=extension_info(dpy,argv[1]);
+	
+	XCloseDisplay(dpy);
+	exit(result);
 }
