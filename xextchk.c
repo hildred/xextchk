@@ -7,10 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+//#include <getopt.h>
+#include <unistd.h>
+#include <stdbool.h>
 
-typedef int bool;
-#define false 0
-#define true 1
+//typedef int bool;
+//#define false 0
+//#define true 1
 bool verbose	= false;
 bool quiet	= false;
 bool list	= false;
@@ -32,7 +35,7 @@ int extension_info(Display * dpy, char* feature)
 		for (i = 0; i < n; i++) {
 			if (list) printf("%s\n", extlist[i]);
 			if (0==strcmp(feature, extlist[i])) {
-				if (verbose) printf("Extension '%s' found.\n", feature);
+				if (!quiet) printf("Extension '%s' found.\n", feature);
 				if (list) {
 					result=EXIT_SUCCESS;
 				} else {
@@ -40,9 +43,9 @@ int extension_info(Display * dpy, char* feature)
 				}
 			}
 		}
-		if (verbose && (EXIT_FAILURE==result)) printf("Extension '%s' not found.\n", feature);
+		if ((!quiet) && (EXIT_FAILURE==result)) printf("Extension '%s' not found.\n", feature);
 	} else {
-		if (verbose) printf("No extensions found.\n");
+		if (!quiet) printf("No extensions found.\n");
 	}
 	// TODO: it might not be a good idea to free extlist, check
 	return result;
@@ -52,10 +55,19 @@ int main(int argc, char **argv)
 {
 	Display *dpy;
 	char *displayname = NULL;
-	int result;
-	
-	printf("debug %d\n", argc);
-	if(2>argc){
+	int opt, result;
+
+	while ((opt = getopt(argc, argv, "vql")) != -1) {
+		switch (opt) {
+			case 'v':	verbose=true;	break;
+			case 'q':	quiet=true;	break;
+			case 'l':	list=true;	break;
+			default: /* '?' */
+				fprintf(stderr, "Usage: %s [-vql] name\n", argv[0]);
+				exit(EXIT_FAILURE);
+		}
+	}
+	if (optind >= argc) {
 		fprintf(stderr, "%s: Insuficent arguments\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -64,9 +76,9 @@ int main(int argc, char **argv)
 		if (!quiet) fprintf(stderr, "%s: Unable to open display \"%s\".\n", argv[0], XDisplayName(displayname));
 		exit(EXIT_FAILURE);
 	}
-	
-	result=extension_info(dpy,argv[1]);
-	
+
+	result=extension_info(dpy,argv[optind]);
+
 	XCloseDisplay(dpy);
 	exit(result);
 }
