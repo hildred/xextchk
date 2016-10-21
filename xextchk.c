@@ -10,10 +10,10 @@
 //#include <getopt.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <libintl.h>
+#include <locale.h>
+#define _(string) gettext (string)
 
-//typedef int bool;
-//#define false 0
-//#define true 1
 bool verbose	= false;
 bool quiet	= false;
 bool list	= false;
@@ -29,13 +29,13 @@ int extension_info(Display * dpy, char* feature)
 	char **extlist = XListExtensions(dpy, &n);
 	int result=EXIT_FAILURE;
 
-	if (verbose) printf("number of extensions: %d\n", n);
+	if (verbose) printf(_("number of extensions: %d\n"), n);
 	if (extlist) {
 		if (list) qsort(extlist, n, sizeof(char *), compare);
 		for (i = 0; i < n; i++) {
 			if (list) printf("%s\n", extlist[i]);
-			if (0==strcmp(feature, extlist[i])) {
-				if (!quiet) printf("Extension '%s' found.\n", feature);
+			if (feature && 0==strcmp(feature, extlist[i])) {
+				if (!quiet) printf(_("Extension '%s' found.\n"), feature);
 				if (list) {
 					result=EXIT_SUCCESS;
 				} else {
@@ -43,9 +43,9 @@ int extension_info(Display * dpy, char* feature)
 				}
 			}
 		}
-		if ((!quiet) && (EXIT_FAILURE==result)) printf("Extension '%s' not found.\n", feature);
+		if ((!quiet) && feature && (EXIT_FAILURE==result)) printf(_("Extension '%s' not found.\n"), feature);
 	} else {
-		if (!quiet) printf("No extensions found.\n");
+		if (!quiet) printf(_("No extensions found.\n"));
 	}
 	// TODO: it might not be a good idea to free extlist, check
 	return result;
@@ -56,6 +56,7 @@ int main(int argc, char **argv)
 	Display *dpy;
 	char *displayname = NULL;
 	int opt, result;
+	char *name = NULL;
 
 	while ((opt = getopt(argc, argv, "vql")) != -1) {
 		switch (opt) {
@@ -63,21 +64,24 @@ int main(int argc, char **argv)
 			case 'q':	quiet=true;	break;
 			case 'l':	list=true;	break;
 			default: /* '?' */
-				fprintf(stderr, "Usage: %s [-vql] name\n", argv[0]);
+				fprintf(stderr, _("Usage: %s [-vql] name\n"), argv[0]);
 				exit(EXIT_FAILURE);
 		}
 	}
-	if (optind >= argc) {
-		fprintf(stderr, "%s: Insuficent arguments\n", argv[0]);
+	if (optind < argc) {
+		name=argv[optind];
+	}else if(list){
+	}else{
+		fprintf(stderr, _("%s: Insuficent arguments\n"), argv[0]);
 		exit(EXIT_FAILURE);
 	}
 	dpy = XOpenDisplay(displayname);
 	if (!dpy) {
-		if (!quiet) fprintf(stderr, "%s: Unable to open display \"%s\".\n", argv[0], XDisplayName(displayname));
+		if (!quiet) fprintf(stderr, _("%s: Unable to open display \"%s\".\n"), argv[0], XDisplayName(displayname));
 		exit(EXIT_FAILURE);
 	}
 
-	result=extension_info(dpy,argv[optind]);
+	result=extension_info(dpy,name);
 
 	XCloseDisplay(dpy);
 	exit(result);
